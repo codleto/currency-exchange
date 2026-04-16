@@ -3,21 +3,27 @@ package entity;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-public class ExchangeRates {
+public class ExchangeRate {
 
     private int id;
-    private Currencies baseCurrencyId;
-    private Currencies targetCurrencyId;
+    private Currency baseCurrencyId;
+    private Currency targetCurrencyId;
     private BigDecimal rate;
 
-    public ExchangeRates(int id, Currencies baseCurrencyId, Currencies targetCurrencyId, BigDecimal rate) {
+    public ExchangeRate(int id, Currency baseCurrencyId, Currency targetCurrencyId, BigDecimal rate) {
         this.id = id;
         this.baseCurrencyId = baseCurrencyId;
         this.targetCurrencyId = targetCurrencyId;
         this.rate = rate;
     }
 
-    public ExchangeRates() {
+    public ExchangeRate(Currency baseCurrencyId, Currency targetCurrencyId, BigDecimal rate) {
+        this.baseCurrencyId = baseCurrencyId;
+        this.targetCurrencyId = targetCurrencyId;
+        this.rate = rate;
+    }
+
+    public ExchangeRate() {
     }
 
     public int getId() {
@@ -28,19 +34,19 @@ public class ExchangeRates {
         this.id = id;
     }
 
-    public Currencies getBaseCurrencyId() {
+    public Currency getBaseCurrencyId() {
         return baseCurrencyId;
     }
 
-    public void setBaseCurrencyId(Currencies baseCurrencyId) {
+    public void setBaseCurrencyId(Currency baseCurrencyId) {
         this.baseCurrencyId = baseCurrencyId;
     }
 
-    public Currencies getTargetCurrencyId() {
+    public Currency getTargetCurrencyId() {
         return targetCurrencyId;
     }
 
-    public void setTargetCurrencyId(Currencies targetCurrencyId) {
+    public void setTargetCurrencyId(Currency targetCurrencyId) {
         this.targetCurrencyId = targetCurrencyId;
     }
 
@@ -55,7 +61,7 @@ public class ExchangeRates {
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
-        ExchangeRates that = (ExchangeRates) o;
+        ExchangeRate that = (ExchangeRate) o;
         return id == that.id && Objects.equals(baseCurrencyId, that.baseCurrencyId) && Objects.equals(targetCurrencyId, that.targetCurrencyId) && Objects.equals(rate, that.rate);
     }
 
