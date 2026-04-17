@@ -42,7 +42,6 @@ public class CurrenciesServlet extends HttpServlet {
             }
         }
         writer.write("]");
-
         resp.setStatus(HttpServletResponse.SC_OK);
     }
 
