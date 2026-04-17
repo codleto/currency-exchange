@@ -2,17 +2,21 @@ package servlet;
 
 import dto.CurrencyDto;
 import entity.Currency;
+import exception.BadRequestException;
+import exception.ConflictException;
+import exception.DatabaseException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import service.CurrencyService;
+import util.ResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
-import static util.JsonUtil.extracted;
+import static util.JsonUtil.writeCurrencyJson;
 
 @WebServlet("/currencies")
 public class CurrenciesServlet extends HttpServlet {
@@ -23,26 +27,26 @@ public class CurrenciesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PrintWriter writer = resp.getWriter();
 
-        List<CurrencyDto> currencyAll = currencyService.findAll();
+        try {
+            List<CurrencyDto> currencyAll = currencyService.findAll();
+            resp.setStatus(HttpServletResponse.SC_OK);
 
-        if (currencyAll.isEmpty()) {
-            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            writer.write("{\"message\": \"База данных недоступна\"}");
-            return;
-        }
+            writer.println("[");
+            for (int i = 0; i < currencyAll.size(); i++) {
+                CurrencyDto currencyDto = currencyAll.get(i);
 
-        writer.println("[");
-        for (int i = 0; i < currencyAll.size(); i++) {
-            CurrencyDto currencyDto = currencyAll.get(i);
+                writeCurrencyJson(writer, currencyDto);
 
-            extracted(writer, currencyDto);
-
-            if (i < currencyAll.size() - 1) {
-                writer.println(",");
+                if (i < currencyAll.size() - 1) {
+                    writer.println(",");
+                }
             }
+            writer.write("]");
+
+        } catch (DatabaseException e){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
-        writer.write("]");
-        resp.setStatus(HttpServletResponse.SC_OK);
     }
 
     @Override
@@ -58,7 +62,7 @@ public class CurrenciesServlet extends HttpServlet {
                 || name == null || name.isBlank()
                 || sign == null || sign.isBlank()){
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"Отсутствует нужное поле формы\"}");
+            ResponseUtil.writeError(resp, "Отсутствует нужное поле формы");
             return;
         }
 
@@ -68,11 +72,19 @@ public class CurrenciesServlet extends HttpServlet {
             CurrencyDto currencyDto = currencyService.save(currency);
             resp.setStatus(HttpServletResponse.SC_CREATED);
 
-            extracted(writer, currencyDto);
+            writeCurrencyJson(writer, currencyDto);
 
-        } catch (RuntimeException e) {
+        } catch (BadRequestException e){
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (ConflictException e) {
             resp.setStatus(HttpServletResponse.SC_CONFLICT);
-            writer.write("{\"message\": \"Валюта с таким кодом уже существует\"}");
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
     }
 }

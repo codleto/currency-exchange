@@ -6,6 +6,8 @@ import dto.CurrencyDto;
 import dto.ExchangeRateDto;
 import entity.Currency;
 import entity.ExchangeRate;
+import exception.BadRequestException;
+import exception.NotFoundException;
 import util.Validator;
 
 import java.math.BigDecimal;
@@ -36,7 +38,7 @@ public class ExchangeRateService {
         return exchangeRateDtos;
     }
 
-    public Optional<ExchangeRateDto> findByCode(String baseCode, String targetCode){
+    public ExchangeRateDto findByCode(String baseCode, String targetCode){
 
         Validator.checkCode(baseCode);
         Validator.checkCode(targetCode);
@@ -44,7 +46,7 @@ public class ExchangeRateService {
         Optional<ExchangeRate> exchangeRateDao = this.exchangeRateDao.findByCode(baseCode, targetCode);
 
         if(exchangeRateDao.isEmpty()){
-            return Optional.empty();
+            throw new NotFoundException("Валютная пара не найдена");
         }
 
         ExchangeRate exchangeRate = exchangeRateDao.get();
@@ -52,28 +54,45 @@ public class ExchangeRateService {
         Currency baseCurrency = exchangeRate.getBaseCurrencyId();
         Currency targetCurrency = exchangeRate.getTargetCurrencyId();
 
-        return Optional.of(buildExchangeRateDto(exchangeRate, baseCurrency, targetCurrency));
+        return buildExchangeRateDto(exchangeRate, baseCurrency, targetCurrency);
     }
 
-    public void update(String baseCode, String targetCode, BigDecimal newRate){
+    public void update(String baseCode, String targetCode, String newRate){
+
+        BigDecimal rate;
+
+        try {
+            rate = new BigDecimal(newRate);
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Некорректное значение rate");
+        }
 
         Validator.checkCode(baseCode);
         Validator.checkCode(targetCode);
-        Validator.checkRate(newRate);
+        Validator.checkRate(rate);
 
         Optional<ExchangeRate> exchangeRateDaoByCode = this.exchangeRateDao.findByCode(baseCode, targetCode);
 
         if(exchangeRateDaoByCode.isEmpty()){
-            throw new RuntimeException("Обменный курс не найден");
+            throw new NotFoundException("Валютная пара не найдена");
         }
 
         ExchangeRate exchangeRate = exchangeRateDaoByCode.get();
-        exchangeRate.setRate(newRate);
+        exchangeRate.setRate(rate);
 
         this.exchangeRateDao.updateRate(exchangeRate);
     }
 
-    public ExchangeRateDto save(String baseCode, String targetCode, BigDecimal rate){
+    public ExchangeRateDto save(String baseCode, String targetCode, String rateString){
+
+        BigDecimal rate;
+
+        try {
+            rate = new BigDecimal(rateString);
+
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Некорректное значение rate");
+        }
 
         Validator.checkCode(baseCode);
         Validator.checkCode(targetCode);
@@ -82,9 +101,8 @@ public class ExchangeRateService {
         Optional<Currency> baseCurrencyDao = currencyDao.findByCode(baseCode);
         Optional<Currency> targetCurrencyDao = currencyDao.findByCode(targetCode);
 
-
         if(baseCurrencyDao.isEmpty() || targetCurrencyDao.isEmpty()){
-            throw new RuntimeException("Одна или обе валюты не найдены");
+            throw new NotFoundException("Одна или обе валюты не найдены");
         }
 
         Currency baseCurrency = baseCurrencyDao.get();
@@ -101,7 +119,16 @@ public class ExchangeRateService {
 
     }
 
-    public ExchangeRateDto exchange(String baseCode, String targetCode, BigDecimal amount){
+    public ExchangeRateDto exchange(String baseCode, String targetCode, String amountString){
+
+        BigDecimal amount;
+
+        try {
+            amount = new BigDecimal(amountString);
+
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Некорректное значение rate");
+        }
 
         Validator.checkCode(baseCode);
         Validator.checkCode(targetCode);
@@ -112,7 +139,7 @@ public class ExchangeRateService {
 
         Optional<ExchangeRate> foundCurrencies = searchCurrency(baseCode, targetCode);
         if (foundCurrencies.isEmpty()){
-            throw new RuntimeException("Обменный курс для пары" + baseCode + "/" + targetCode + " не найден");
+            throw new NotFoundException("Обменный курс для пары" + baseCode + "/" + targetCode + " не найден");
         }
 
         ExchangeRate exchangeRate = foundCurrencies.get();
@@ -201,7 +228,7 @@ public class ExchangeRateService {
         if (currencyOptional.isPresent()) {
             return currencyOptional.get();
         } else {
-            throw new RuntimeException("Валюта с кодом " + code + " не найдена");
+            throw new NotFoundException("Валюта с кодом " + code + " не найдена");
         }
     }
 

@@ -1,6 +1,8 @@
 package dao;
 
 import entity.Currency;
+import exception.ConflictException;
+import exception.DatabaseException;
 import util.ConnectionManager;
 
 import java.sql.*;
@@ -29,7 +31,7 @@ public class CurrencyDao {
             WHERE code = ?;
             """;
 
-    private CurrencyDao(){};
+    private CurrencyDao(){}
 
     public List<Currency> findAll(){
         try (Connection connection = ConnectionManager.open();
@@ -44,7 +46,7 @@ public class CurrencyDao {
             }
             return currencies;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
@@ -63,7 +65,7 @@ public class CurrencyDao {
             }
             return Optional.ofNullable(currency);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
@@ -83,7 +85,10 @@ public class CurrencyDao {
             }
             return currency;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            if (e.getMessage() != null && e.getMessage().contains("UNIQUE")){
+                throw new ConflictException("Данная валюта уже существует");
+            }
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 

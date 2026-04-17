@@ -1,12 +1,14 @@
 package servlet;
 
 import dto.ExchangeRateDto;
+import exception.DatabaseException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import service.ExchangeRateService;
 import util.JsonUtil;
+import util.ResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,22 +23,28 @@ public class ExchangeRatesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         PrintWriter writer = resp.getWriter();
 
-        List<ExchangeRateDto> all = exchangeRateService.findAll();
+        try {
+            List<ExchangeRateDto> all = exchangeRateService.findAll();
 
-        writer.println("[");
-        for (int i = 0; i < all.size(); i++) {
-            ExchangeRateDto exchangeRateDto = all.get(i);
+            resp.setStatus(HttpServletResponse.SC_OK);
 
-            JsonUtil.writeExchangeRateResponse(writer, exchangeRateDto);
+            writer.println("[");
+            for (int i = 0; i < all.size(); i++) {
+                ExchangeRateDto exchangeRateDto = all.get(i);
 
-            if (i < all.size() - 1) {
-                writer.println(",");
+                JsonUtil.writeExchangeRateJson(writer, exchangeRateDto);
+
+                if (i < all.size() - 1) {
+                    writer.println(",");
+                }
+                writer.println();
             }
-            writer.println();
-        }
-        writer.println("]");
+            writer.println("]");
 
-        resp.setStatus(HttpServletResponse.SC_OK);
+        } catch (DatabaseException e){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
+        }
     }
 }
 

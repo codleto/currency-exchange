@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 
 public class JsonUtil {
 
-    public static void  writeExchangeRateResponse(PrintWriter writer, ExchangeRateDto dto) {
+    public static void writeExchangeRateJson(PrintWriter writer, ExchangeRateDto dto) {
         writer.println("{");
         writer.println("\"base_currency\": {");
         writer.println("  \"code\": \"" + dto.getBaseCurrencyId().getCode() + "\",");
@@ -34,7 +34,7 @@ public class JsonUtil {
         writer.println("}");
     }
 
-    public static void extracted(PrintWriter writer, CurrencyDto currencyDto) {
+    public static void writeCurrencyJson(PrintWriter writer, CurrencyDto currencyDto) {
         writer.println("{");
         writer.println("\"code\": \"" + currencyDto.getCode() + "\",");
         writer.println("\"name\": \"" + currencyDto.getName() + "\",");

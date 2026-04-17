@@ -1,17 +1,20 @@
 package servlet;
 
 import dto.CurrencyDto;
+import exception.BadRequestException;
+import exception.DatabaseException;
+import exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import service.CurrencyService;
+import util.ResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Optional;
 
-import static util.JsonUtil.extracted;
+import static util.JsonUtil.writeCurrencyJson;
 
 @WebServlet("/currency/*")
 public class CurrencyServlet extends HttpServlet {
@@ -25,18 +28,22 @@ public class CurrencyServlet extends HttpServlet {
 
         PrintWriter writer = resp.getWriter();
 
-        Optional<CurrencyDto>currencyDtoOptional = currencyService.findByCode(code);
+        try {
+            CurrencyDto currencyDtoOptional = currencyService.findByCode(code);
+            resp.setStatus(HttpServletResponse.SC_OK);
+            writeCurrencyJson(writer, currencyDtoOptional);
 
-        if(currencyDtoOptional.isEmpty()){
+        } catch (BadRequestException e){
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (NotFoundException e){
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            writer.write("{\"message\": \"База данных недоступна\"}");
-            return;
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e) {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
-
-        CurrencyDto currencyDto = currencyDtoOptional.get();
-        resp.setStatus(HttpServletResponse.SC_OK);
-
-        extracted(writer, currencyDto);
     }
-
 }

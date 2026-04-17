@@ -1,17 +1,20 @@
 package servlet;
 
 import dto.ExchangeRateDto;
+import exception.BadRequestException;
+import exception.ConflictException;
+import exception.DatabaseException;
+import exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import service.ExchangeRateService;
 import util.JsonUtil;
+import util.ResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigDecimal;
-import java.util.Optional;
 
 @WebServlet("/exchange-rate/*")
 public class ExchangeRateServlet extends HttpServlet {
@@ -28,19 +31,24 @@ public class ExchangeRateServlet extends HttpServlet {
         String baseCode = code.substring(0,3);
         String targetCode = code.substring(3);
 
-        Optional<ExchangeRateDto> byCode = exchangeRateService.findByCode(baseCode, targetCode);
-        if(byCode.isEmpty()){
+        try {
+            ExchangeRateDto byCode = exchangeRateService.findByCode(baseCode, targetCode);
+
+            resp.setStatus(HttpServletResponse.SC_OK);
+            JsonUtil.writeExchangeRateJson(writer, byCode);
+
+        } catch (BadRequestException e){
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (NotFoundException e){
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e){
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            writer.write("{\"message\": \"Ошибка! База данных недоступна\"}");
-
-            return;
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
-
-        ExchangeRateDto exchangeRateDto = byCode.get();
-
-        JsonUtil.writeExchangeRateResponse(writer, exchangeRateDto);
-        resp.setStatus(HttpServletResponse.SC_OK);
-
     }
 
     @Override
@@ -55,32 +63,35 @@ public class ExchangeRateServlet extends HttpServlet {
         if(baseCode == null || baseCode.isBlank() || targetCode == null || targetCode.isBlank()
                 || rateString == null || rateString.isBlank()) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"Данные заполнены не полностью\"}");
+            ResponseUtil.writeError(resp, "Данные заполнены не полностью");
             return;
         }
-
-        BigDecimal rate;
 
         try {
-            rate = new BigDecimal(rateString);
+            ExchangeRateDto save = exchangeRateService.save(baseCode, targetCode, rateString);
+            resp.setStatus(HttpServletResponse.SC_CREATED);
+            JsonUtil.writeExchangeRateJson(writer,save);
 
-        } catch (Exception e) {
+        } catch (BadRequestException e){
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"Неправильный формат rate\"}");
-            return;
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (NotFoundException e){
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (ConflictException e){
+            resp.setStatus(HttpServletResponse.SC_CONFLICT);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
-
-        ExchangeRateDto save = exchangeRateService.save(baseCode, targetCode, rate);
-
-        JsonUtil.writeExchangeRateResponse(writer,save);
-
-        resp.setStatus(HttpServletResponse.SC_CREATED);
     }
 
     @Override
     protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-
-        PrintWriter writer = resp.getWriter();
 
         String pathInfo = req.getPathInfo();
         String code = pathInfo.substring(1);
@@ -91,21 +102,25 @@ public class ExchangeRateServlet extends HttpServlet {
 
         if(base.isBlank() || target.isBlank() || rateString == null || rateString.isBlank()){
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"Данные заполнены не полностью\"}");
+            ResponseUtil.writeError(resp, "Данные заполнены не полностью");
             return;
         }
 
-        BigDecimal rate;
-
         try {
-            rate = new BigDecimal(rateString);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            exchangeRateService.update(base, target, rateString);
+            resp.setStatus(HttpServletResponse.SC_OK);
+
+        } catch (BadRequestException e){
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (NotFoundException e){
+            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e){
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
-
-        exchangeRateService.update(base, target, rate);
-        resp.setStatus(HttpServletResponse.SC_OK);
-
     }
-
 }

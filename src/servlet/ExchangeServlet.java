@@ -1,16 +1,19 @@
 package servlet;
 
 import dto.ExchangeRateDto;
+import exception.BadRequestException;
+import exception.DatabaseException;
+import exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import service.ExchangeRateService;
 import util.JsonUtil;
+import util.ResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.math.BigDecimal;
 
 @WebServlet("/exchange")
 public class ExchangeServlet extends HttpServlet {
@@ -22,36 +25,34 @@ public class ExchangeServlet extends HttpServlet {
 
         PrintWriter writer = resp.getWriter();
 
-        String base = req.getParameter("base");
-        String target = req.getParameter("target");
+        String base = req.getParameter("from");
+        String target = req.getParameter("to");
         String amountString = req.getParameter("amount");
 
         if (base == null || target == null || amountString == null ||
                 base.isBlank() || target.isBlank() || amountString.isBlank()) {
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"Нет данных\"}");
+            ResponseUtil.writeError(resp, "Данные заполнены не полностью");
             return;
         }
 
-        BigDecimal amount;
-
         try {
-            amount = new BigDecimal(amountString);
+            ExchangeRateDto exchange = exchangeRateService.exchange(base, target, amountString);
 
-            ExchangeRateDto exchange = exchangeRateService.exchange(base, target, amount);
             resp.setStatus(HttpServletResponse.SC_OK);
+            JsonUtil.writeExchangeRateJson(writer, exchange);
 
-            JsonUtil.writeExchangeRateResponse(writer, exchange);
-
-        } catch (NumberFormatException e) {
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            writer.write("{\"message\": \"" + e.getMessage() + "\"}");
-        } catch (RuntimeException e) {
+        } catch (NotFoundException e) {
             resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            writer.write("{\"message\":" + e.getMessage() + "\"}");
-        } catch (Exception e) {
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (BadRequestException e) {
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            ResponseUtil.writeError(resp, e.getMessage());
+
+        } catch (DatabaseException e) {
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            writer.write("{\"message\":" + e.getMessage() + "\"}");
+            ResponseUtil.writeError(resp, "Ошибка базы данных");
         }
     }
 }

@@ -3,6 +3,7 @@ package service;
 import dao.CurrencyDao;
 import dto.CurrencyDto;
 import entity.Currency;
+import exception.NotFoundException;
 import util.Validator;
 
 import java.util.ArrayList;
@@ -32,25 +33,24 @@ public class CurrencyService {
         return currenciesDto;
     }
 
-    public Optional<CurrencyDto> findByCode(String code){
+    public CurrencyDto findByCode(String code){
 
         Validator.checkCode(code);
 
         Optional<Currency> currencyDao = this.currencyDao.findByCode(code);
 
         if(currencyDao.isEmpty()){
-            return Optional.empty();
+            throw new NotFoundException("Валюта не найдена");
         }
 
         Currency currency = currencyDao.get();
 
-        CurrencyDto currencyDto = new CurrencyDto(
+        return new CurrencyDto(
                 currency.getCode(),
                 currency.getName(),
                 currency.getSign()
         );
 
-        return Optional.of(currencyDto);
     }
 
     public CurrencyDto save(Currency currency){

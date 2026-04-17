@@ -1,6 +1,8 @@
 package dao;
 import entity.Currency;
 import entity.ExchangeRate;
+import exception.ConflictException;
+import exception.DatabaseException;
 import util.ConnectionManager;
 
 import java.sql.*;
@@ -55,7 +57,7 @@ public class ExchangeRateDao {
 
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
@@ -75,7 +77,10 @@ public class ExchangeRateDao {
 
             return exchangeRate;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            if(e.getMessage() != null && e.getMessage().contains("UNIQUE")){
+                throw new ConflictException("Такая валютная пара уже существует");
+            }
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
@@ -93,7 +98,7 @@ public class ExchangeRateDao {
             }
             return Optional.ofNullable(exchangeRate);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
@@ -111,7 +116,7 @@ public class ExchangeRateDao {
 
             return exchangeRates;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new DatabaseException("Ошибка базы данных", e);
         }
     }
 
