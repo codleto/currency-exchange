@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
-@WebServlet("exchange-rates")
+@WebServlet("/exchange-rates")
 public class ExchangeRatesServlet extends HttpServlet {
 
     private final ExchangeRateService exchangeRateService = ExchangeRateService.getInstance();
